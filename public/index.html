@@ -101,6 +101,11 @@ label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,text
 </section>
 
 <section id="exchangeTab" class="hidden">
+<div class="row" style="margin:10px 0;gap:8px;align-items:center;flex-wrap:wrap">
+ <button type="button" onclick="repairKnownDuplicates()">修复本地图中的六个重复节点</button>
+ <span class="hint">仅清理已确认的六个误复制节点；保留 test 节点、其他数据及全部历史记录。</span>
+</div>
+
 <div class="panel">
 <h2>整张地图交换</h2>
 <p class="hint">交换的不再是单条终点线，而是<b>当前整张地图的所有痕迹</b>：底图、网络、多点连线。下一位导入后，可以从地图上的任意历史节点继续往下长。</p>
@@ -151,7 +156,7 @@ function loadLocalData(){
  } catch(e) {}
  return clone(DEFAULT_DATA);
 }
-function localSave(){ localStorage.setItem("mm_v3", JSON.stringify(data)); }
+function localSave(){ data=cleanKnownDuplicates(data); localStorage.setItem("mm_v3", JSON.stringify(data)); }
 function log(t){
  const e=document.createElement("div");e.className="entry";
  e.textContent=new Date().toLocaleTimeString()+" "+t;$("logs").prepend(e);
@@ -159,8 +164,28 @@ function log(t){
 function nodeBy(id){ return data.nodes.find(n=>n.id===id); }
 function edgeKey(a,b){ return [a,b].sort().join("_"); }
 function normalizeMap(x){return {nodes:Array.isArray(x?.nodes)?x.nodes:[],edges:Array.isArray(x?.edges)?x.edges:[],history:Array.isArray(x?.history)?x.history:[]};}
+// 本次地图中已确认的六个误复制节点。仅按精确 ID 清理，不按名称去重，避免误删用户有意创建的同名节点。
+const KNOWN_DUPLICATE_NODE_IDS = new Set([
+ "44047a7d-efb7-4ec6-8dc4-e404287be519",
+ "9ffd6cb1-e3a5-4eae-8a31-35729ac046ad",
+ "99066c5b-5193-49cb-a243-8698d3db591e",
+ "51bfba78-2d9f-488e-8ecf-5921fa0ad74c",
+ "09526c8f-bfe1-4297-8fb0-1a0013b6a1eb",
+ "b0b399e6-439c-4f05-a0a4-a0d1b99e3f31"
+]);
+function cleanKnownDuplicates(map){
+ const out=normalizeMap(clone(map));
+ const before=out.nodes.length;
+ out.nodes=out.nodes.filter(n=>!KNOWN_DUPLICATE_NODE_IDS.has(n.id));
+ if(out.nodes.length!==before){
+  out.edges=out.edges.filter(e=>!KNOWN_DUPLICATE_NODE_IDS.has(e.a)&&!KNOWN_DUPLICATE_NODE_IDS.has(e.b));
+ }
+ // 故意保留 history：历史记录是审计痕迹，不随节点删除而清除。
+ return out;
+}
 function mergeMaps(remote, local){
- const out=normalizeMap(clone(remote));
+ const out=cleanKnownDuplicates(remote);
+ local=cleanKnownDuplicates(local);
  const nodeIds=new Set(out.nodes.map(n=>n.id));
  local.nodes.forEach(n=>{if(!nodeIds.has(n.id)){out.nodes.push(n);nodeIds.add(n.id);}});
  const edgeIds=new Set(out.edges.map(e=>e.key||edgeKey(e.a,e.b)));
@@ -213,7 +238,7 @@ async function loadOnlineMap(id, key="", edit=""){
   const result=await api("/maps/"+encodeURIComponent(id)+q);
   onlineMapId=id;readKey=key;editToken=savedEdit;revision=result.revision;visibility=result.visibility;
   if(editToken)localStorage.setItem(ownerTokenKey(id),editToken);
-  data=normalizeMap(result.mapData);$("mapTitle").value=result.title||"共享地图";$("visibility").value=visibility;
+  data=cleanKnownDuplicates(result.mapData);$("mapTitle").value=result.title||"共享地图";$("visibility").value=visibility;
   localSave();lastSavedJSON=JSON.stringify(data);setUrl();render();updateSummary();updateSelected();updateCurrent();
   startPolling();$status(editToken?"在线地图 · 可编辑":"在线地图 · 只读");
   log("已打开在线地图："+$("mapTitle").value);
@@ -409,6 +434,17 @@ function updateCurrent(){
  const hint=document.createElement("div");hint.className="hint";hint.textContent="理由："+(current.reason||"无");c.append(chain,hint);
 }
 function updateSummary(){$("summary").textContent=data.nodes.length+" 个节点 ／ "+data.edges.length+" 条连接 ／ "+data.history.length+" 次连线行动";}
+function repairKnownDuplicates(){
+ if(!canMoveNodes())return alert("当前地图为只读状态，无法修复。请使用协作编辑链接打开。");
+ const count=data.nodes.filter(n=>KNOWN_DUPLICATE_NODE_IDS.has(n.id)).length;
+ if(!count){alert("没有发现这六个已确认的重复节点。当前地图可能尚未加载，或已经修复。");return;}
+ if(!confirm("将删除已确认的六个误复制节点，并清理它们关联的连线。所有历史记录、原始六个节点及 test 节点都会保留。确定修复吗？"))return;
+ data=cleanKnownDuplicates(data);selected=selected.filter(id=>nodeBy(id));
+ if(current.newId&&!nodeBy(current.newId))current={};
+ localSave();save();render();updateSummary();updateSelected();updateCurrent();
+ log("已清理六个确认的重复节点；历史记录完整保留。");
+ alert("修复完成，正在同步到云端。请等待状态显示“云端已保存”。");
+}
 function makeExchange(){
  let payload={version:5,map:data,exportedAt:new Date().toISOString()};
  let code=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));$("code").textContent=code;$("exchangeResult").classList.remove("hidden");log("已生成整张地图交换码。");
