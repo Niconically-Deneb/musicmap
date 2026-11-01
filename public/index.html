@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Map — Online v5.0</title>
+<title>Music Map — Cloudflare Online v5.1 Layout</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#ebe7dc;color:#151515;font-family:Arial,"Noto Sans SC",sans-serif}
 header{border-bottom:2px solid #151515;padding:20px 26px;display:flex;justify-content:space-between;align-items:center}
@@ -18,10 +18,14 @@ label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,text
 #map{height:590px;position:relative;overflow:hidden;border:1.5px solid #151515;background:#fffef9;background-image:linear-gradient(#ddd9cf 1px,transparent 1px),linear-gradient(90deg,#ddd9cf 1px,transparent 1px);background-size:25px 25px}
 .line{position:absolute;height:2px;background:#151515;transform-origin:left center;z-index:1;opacity:.65}
 .node{position:absolute;transform:translate(-50%,-50%);min-width:70px;max-width:145px;padding:8px 10px;text-align:center;border:1.5px solid #151515;background:#fffef9;font-size:12px;z-index:3;cursor:pointer;user-select:none;transition:transform .1s}
-.node:hover{transform:translate(-50%,-50%) scale(1.05)}
+.node:hover{transform:translate(-50%,-50%) scale(1.03)}
+.node{touch-action:none;cursor:grab}.node.dragging{cursor:grabbing;z-index:8;box-shadow:0 4px 16px #0003;transition:none}
 .node.base{border-radius:3px}.node.route{border-radius:50%}.node.selected{outline:3px solid #d9534f;outline-offset:3px;background:#fbeed5}
 .node.new{background:#151515;color:#fff}
 .node .tag{display:block;font-size:9px;opacity:.5;margin-top:3px}
+.node .delete-node{position:absolute;right:-9px;top:-9px;width:21px;height:21px;min-width:21px;padding:0;border:1px solid #900;border-radius:50%;background:#fff;color:#900;font-size:14px;line-height:18px;display:none;z-index:5}
+.node:hover .delete-node{display:block}
+.node .delete-node:hover{background:#900;color:#fff}
 .mode{padding:9px;background:#e1ddd2;font-size:12px;margin-bottom:10px}
 .selectedList{min-height:34px;border:1.5px dashed #151515;padding:8px;background:#fffef9;font-size:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .chip{background:#151515;color:#fff;padding:2px 6px;font-size:11px;border-radius:2px}
@@ -45,6 +49,7 @@ label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,text
     <option value="public">公开地图</option><option value="private">私人地图</option>
   </select>
   <button onclick="createOnlineMap()">创建在线地图</button>
+  <button onclick="createNewBlankMap()">＋ 新建全新地图</button>
   <input id="mapLinkInput" placeholder="粘贴地图链接或 ID" style="flex:1;min-width:160px">
   <button onclick="openOnlineMap()">打开地图</button>
   <button onclick="copyShareLink()">复制浏览链接</button>
@@ -71,7 +76,7 @@ label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,text
 </div>
 <div class="panel">
 <div id="mapMode" class="mode">💡 提示：你可以直接在下方地图里点击任意节点进行**多选**（被选中的节点会变成醒目的红边框），选好后切换到“留下新节点”标签页。</div>
-<div id="map"></div>
+<div id="map"></div><p class="hint">操作：点击节点可多选；拖动节点可调整位置，松开后自动保存。在线只读地图不能拖动。</p>
 </div>
 </section>
 
@@ -184,6 +189,23 @@ async function createOnlineMap(){
   alert("在线地图已创建。浏览链接可分享查看；协作编辑链接可授予编辑权限，请谨慎转发。");
  }catch(e){console.error(e);alert("创建失败："+e.message);}
 }
+async function createNewBlankMap(){
+ if(!confirm("将创建一张全新的空白在线地图。当前地图会保留在云端，可通过原链接再次打开。确定继续吗？"))return;
+ const blank={nodes:[],edges:[],history:[]};
+ try{
+  const title=prompt("请输入新地图名称", "我的新 Music Map");
+  if(title===null)return;
+  const result=await api("/maps",{method:"POST",body:JSON.stringify({title:title.trim()||"未命名地图",visibility:$("visibility").value,mapData:blank})});
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+  data=blank;selected=[];current={};
+  onlineMapId=result.id;readKey=result.readKey;editToken=result.editToken;revision=result.revision||1;visibility=result.visibility;
+  localStorage.setItem(ownerTokenKey(onlineMapId),editToken);localSave();setUrl();
+  $("mapTitle").value=result.title||title.trim()||"未命名地图";
+  lastSavedJSON=JSON.stringify(data);startPolling();render();updateSummary();updateSelected();updateCurrent();
+  $status("已新建空白在线地图");log("已新建全新地图："+$("mapTitle").value);
+  alert("新地图已创建并切换。原地图仍保留，可用原链接重新打开。请复制新地图的浏览或协作链接分享。");
+ }catch(e){console.error(e);alert("新建地图失败："+e.message);}
+}
 async function loadOnlineMap(id, key="", edit=""){
  try{
   const savedEdit=edit||localStorage.getItem(ownerTokenKey(id))||"";
@@ -261,27 +283,102 @@ function tab(id){
  ["tmap","troute","tex"].forEach((x,i)=>$(x).classList.toggle("active",["mapTab","routeTab","exchangeTab"][i]===id));
  render();updateSummary();
 }
+// 根据节点文字估算占用尺寸，并在地图内寻找不与现有节点重叠的位置。
+function nodeBox(n, mapW, mapH){
+ const text=String(n.name||"未命名");
+ const width=Math.min(145,Math.max(70,Math.min(text.length,18)*7.2+28));
+ return {w:width,h:48};
+}
+function findFreePosition(x,y,excludeId=null){
+ const m=$("map"), r=m.getBoundingClientRect();
+ const W=Math.max(300,r.width), H=Math.max(300,r.height);
+ const nodes=data.nodes.filter(n=>n.id!==excludeId);
+ const golden=Math.PI*(3-Math.sqrt(5));
+ for(let i=0;i<420;i++){
+  const radius=i===0?0:18*Math.sqrt(i);
+  const angle=i*golden;
+  const px=x+Math.cos(angle)*radius, py=y+Math.sin(angle)*radius;
+  const candidate={x:px,y:py};
+  const box=nodeBox({name:"候选节点"},W,H);
+  const cx=Math.max(box.w/2+10,Math.min(W-box.w/2-10,px));
+  const cy=Math.max(box.h/2+10,Math.min(H-box.h/2-10,py));
+  let collision=false;
+  for(const n of nodes){
+   const b=nodeBox(n,W,H), nx=n.x/100*W, ny=n.y/100*H;
+   if(Math.abs(cx-nx)<(box.w+b.w)/2+16 && Math.abs(cy-ny)<(box.h+b.h)/2+16){collision=true;break;}
+  }
+  if(!collision)return {x:cx/W*100,y:cy/H*100};
+ }
+ // 极端拥挤时仍给出边界内位置，用户可继续手动拖动整理。
+ return {x:Math.max(5,Math.min(95,x/W*100)),y:Math.max(6,Math.min(94,y/H*100))};
+}
 function addBase(){
  let n=$("bn").value.trim();if(!n)return;
- data.nodes.push({id:uid(),name:n,type:$("bt").value.trim(),note:$("bi").value.trim(),x:15+Math.random()*70,y:15+Math.random()*70,kind:"base"});
+ const pos=findFreePosition(($("map").clientWidth||800)*(.15+Math.random()*.7),($("map").clientHeight||590)*(.15+Math.random()*.7));
+ data.nodes.push({id:uid(),name:n,type:$("bt").value.trim(),note:$("bi").value.trim(),...pos,kind:"base"});
  $("bn").value=$("bt").value=$("bi").value="";save();render();
 }
 function addEdge(a,b,reason=""){if(a===b)return;if(!data.edges.some(e=>(e.key||edgeKey(e.a,e.b))===edgeKey(a,b)))data.edges.push({key:edgeKey(a,b),a,b,reason});}
-function render(){
- const m=$("map");m.innerHTML="";const rect=m.getBoundingClientRect();
+function drawEdges(){
+ const m=$("map");m.querySelectorAll(".line").forEach(e=>e.remove());
+ const rect=m.getBoundingClientRect();
  data.edges.forEach(e=>{
   let a=nodeBy(e.a),b=nodeBy(e.b);if(!a||!b)return;
   let x1=a.x/100*rect.width,y1=a.y/100*rect.height,x2=b.x/100*rect.width,y2=b.y/100*rect.height;
   let dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),l=document.createElement("div");
   l.className="line";l.style.left=x1+"px";l.style.top=y1+"px";l.style.width=len+"px";l.style.transform="rotate("+Math.atan2(dy,dx)+"rad)";l.title=e.reason||"";m.appendChild(l);
  });
+}
+function canMoveNodes(){return !onlineMapId||!!editToken;}
+function render(){
+ const m=$("map");m.querySelectorAll(".node,.line").forEach(e=>e.remove());
+ drawEdges();
  data.nodes.forEach(n=>{
   let d=document.createElement("div");d.className="node "+(n.kind==="base"?"base":"route");
   if(selected.includes(n.id))d.classList.add("selected");if(current.newId===n.id)d.classList.add("new");
-  d.style.left=n.x+"%";d.style.top=n.y+"%";
+  d.style.left=n.x+"%";d.style.top=n.y+"%";d.dataset.nodeId=n.id;
   const name=document.createTextNode(n.name||"未命名"),tag=document.createElement("span");tag.className="tag";tag.textContent=n.type||"路线节点";
-  d.append(name,tag);d.onclick=ev=>{ev.stopPropagation();toggleSelect(n.id);};m.appendChild(d);
+  d.append(name,tag);
+  if(canMoveNodes()){
+   const del=document.createElement("button");del.className="delete-node";del.type="button";del.textContent="×";del.title="删除这个节点";
+   del.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();});
+   del.addEventListener("click",ev=>{ev.preventDefault();ev.stopPropagation();deleteNode(n.id);});
+   d.append(del);
+  }
+  let drag=null;
+  d.addEventListener("pointerdown",ev=>{
+   if(!canMoveNodes()||ev.button!==0)return;
+   ev.preventDefault();ev.stopPropagation();
+   const mr=m.getBoundingClientRect();drag={id:n.id,startX:ev.clientX,startY:ev.clientY,moved:false,offsetX:ev.clientX-mr.left,offsetY:ev.clientY-mr.top};
+   d.setPointerCapture(ev.pointerId);
+  });
+  d.addEventListener("pointermove",ev=>{
+   if(!drag)return;
+   const dx=ev.clientX-drag.startX,dy=ev.clientY-drag.startY;
+   if(Math.hypot(dx,dy)>4)drag.moved=true;
+   if(!drag.moved)return;
+   const mr=m.getBoundingClientRect(),box=d.getBoundingClientRect();
+   const halfW=box.width/2,halfH=box.height/2;
+   const px=Math.max(halfW+8,Math.min(mr.width-halfW-8,ev.clientX-mr.left));
+   const py=Math.max(halfH+8,Math.min(mr.height-halfH-8,ev.clientY-mr.top));
+   n.x=px/mr.width*100;n.y=py/mr.height*100;
+   d.style.left=n.x+"%";d.style.top=n.y+"%";d.classList.add("dragging");drawEdges();
+  });
+  const finish=()=>{if(!drag)return;const moved=drag.moved;drag=null;d.classList.remove("dragging");if(moved){log("已移动节点："+(n.name||"未命名"));save();}else{toggleSelect(n.id);}};
+  d.addEventListener("pointerup",finish);d.addEventListener("pointercancel",finish);
+  m.appendChild(d);
  });
+}
+function deleteNode(id){
+ if(!canMoveNodes())return alert("当前地图为只读状态，无法删除节点。");
+ const node=nodeBy(id);if(!node)return;
+ if(!confirm("确定删除节点「"+(node.name||"未命名")+"」吗？\n\n与它相连的连线会一并删除；历史记录会完整保留，不会被清除。"))return;
+ data.nodes=data.nodes.filter(n=>n.id!==id);
+ data.edges=data.edges.filter(e=>e.a!==id&&e.b!==id);
+ selected=selected.filter(x=>x!==id);
+ if(current.newId===id||current.to===id)current={};
+ log("已删除节点："+(node.name||"未命名节点")+"；相关历史记录已保留");
+ save();render();updateSelected();updateCurrent();updateSummary();
 }
 function toggleSelect(id){selected=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];updateSelected();render();}
 function updateSelected(){
@@ -295,7 +392,9 @@ function addRouteNode(){
  let n=$("nn").value.trim();if(!n)return alert("请输入你想要留下的新节点名称！");
  let avgx=selected.reduce((s,id)=>s+(nodeBy(id)?.x||50),0)/selected.length;
  let avgy=selected.reduce((s,id)=>s+(nodeBy(id)?.y||50),0)/selected.length;
- let newNode={id:uid(),name:n,type:"路线",x:Math.min(90,Math.max(10,avgx+(Math.random()*10-5))),y:Math.min(90,Math.max(10,avgy+(Math.random()*10-5))),kind:"route"};
+ const mapW=$("map").clientWidth||800,mapH=$("map").clientHeight||590;
+ const pos=findFreePosition(avgx/100*mapW,avgy/100*mapH);
+ let newNode={id:uid(),name:n,type:"路线",...pos,kind:"route"};
  data.nodes.push(newNode);let reason=$("nr").value.trim();selected.forEach(id=>addEdge(id,newNode.id,reason));
  data.history.push({id:uid(),from:[...selected],to:newNode.id,reason,time:new Date().toISOString()});
  current={newId:newNode.id,from:[...selected],to:newNode.id,reason};
