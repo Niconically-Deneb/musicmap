@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Map — Cloudflare Online v5.4 Edge Fix</title>
+<title>Music Map — Cloudflare Online v5.5 Edge Alignment Fix</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#ebe7dc;color:#151515;font-family:Arial,"Noto Sans SC",sans-serif}
 header{border-bottom:2px solid #151515;padding:20px 26px;display:flex;justify-content:space-between;align-items:center}
@@ -347,10 +347,14 @@ function addEdge(a,b,reason=""){if(a===b)return;if(!data.edges.some(e=>(e.key||e
 function drawEdges(){
  const m=$("map");
  m.querySelectorAll(".edge-layer").forEach(e=>e.remove());
- const width=m.clientWidth,height=m.clientHeight;
  const ns="http://www.w3.org/2000/svg";
  const svg=document.createElementNS(ns,"svg");
  svg.setAttribute("class","edge-layer");
+ // Use the SVG's actual on-screen rectangle as the coordinate system.
+ // This avoids percentage/border/transform offsets that can detach the source end.
+ m.prepend(svg);
+ const sr=svg.getBoundingClientRect();
+ const width=Math.max(1,sr.width),height=Math.max(1,sr.height);
  svg.setAttribute("viewBox",`0 0 ${width} ${height}`);
  svg.setAttribute("preserveAspectRatio","none");
  data.edges.forEach(e=>{
@@ -358,20 +362,22 @@ function drawEdges(){
   const da=m.querySelector(`[data-node-id="${CSS.escape(a.id)}"]`);
   const db=m.querySelector(`[data-node-id="${CSS.escape(b.id)}"]`);
   if(!da||!db)return;
-  const ax=a.x/100*width,ay=a.y/100*height,bx=b.x/100*width,by=b.y/100*height;
+  const ra=da.getBoundingClientRect(),rb=db.getBoundingClientRect();
+  // Element centers are measured from the same viewport origin as the SVG.
+  const ax=(ra.left+ra.right)/2-sr.left, ay=(ra.top+ra.bottom)/2-sr.top;
+  const bx=(rb.left+rb.right)/2-sr.left, by=(rb.top+rb.bottom)/2-sr.top;
   const dx=bx-ax,dy=by-ay;
   if(Math.hypot(dx,dy)<1)return;
-  // 让端点落在节点实际矩形边缘，而不是被节点遮住的中心位置。
-  const aw=da.offsetWidth/2,ah=da.offsetHeight/2,bw=db.offsetWidth/2,bh=db.offsetHeight/2;
-  const ta=1/Math.max(Math.abs(dx)/Math.max(aw,1),Math.abs(dy)/Math.max(ah,1));
-  const tb=1/Math.max(Math.abs(dx)/Math.max(bw,1),Math.abs(dy)/Math.max(bh,1));
+  // Intersect the center-to-center ray with each node's real bounding rectangle.
+  const ahw=ra.width/2,ahh=ra.height/2,bhw=rb.width/2,bhh=rb.height/2;
+  const ta=1/Math.max(Math.abs(dx)/Math.max(ahw,0.5),Math.abs(dy)/Math.max(ahh,0.5));
+  const tb=1/Math.max(Math.abs(dx)/Math.max(bhw,0.5),Math.abs(dy)/Math.max(bhh,0.5));
   const line=document.createElementNS(ns,"line");
   line.setAttribute("x1",ax+dx*ta);line.setAttribute("y1",ay+dy*ta);
   line.setAttribute("x2",bx-dx*tb);line.setAttribute("y2",by-dy*tb);
   if(e.reason)line.setAttribute("aria-label",e.reason);
   svg.appendChild(line);
  });
- m.prepend(svg);
 }
 function canMoveNodes(){return !onlineMapId||!!editToken;}
 function render(){
