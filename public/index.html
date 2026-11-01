@@ -1,9 +1,11 @@
+<!-- Powered by Nico -->
+ <!--这是一个彩蛋-->
 <!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Map — Cloudflare Online v5.6 Clean UI</title>
+<title>Music Map — Cloudflare Online v5.7 Online Tab</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#ebe7dc;color:#151515;font-family:Arial,"Noto Sans SC",sans-serif}
 header{border-bottom:2px solid #151515;padding:20px 26px;display:flex;justify-content:space-between;align-items:center}
@@ -38,29 +40,15 @@ label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,text
 </head>
 <body>
 <header>
-<div><h1>Music Map / Shared Map v3.1</h1><div class="sub">共同底图 · 路线痕迹 · 多点出发 · 交换网络</div></div>
+<div><h1>Music Map / Shared Map v3.1</h1><div class="sub">共同底图 · 路线痕迹 · 多点出发 · 在线协作</div></div>
 <button class="danger" onclick="clearAll()">清空本地地图</button>
 </header>
 
 <main>
-<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-  <input id="mapTitle" placeholder="地图名称" value="我的 Music Map" style="flex:1;min-width:160px">
-  <select id="visibility" aria-label="地图可见性" style="padding:10px;border:1.5px solid #151515;background:#fffef9">
-    <option value="public">公开地图</option><option value="private">私人地图</option>
-  </select>
-  <button onclick="createOnlineMap()">创建在线地图</button>
-  <button onclick="createNewBlankMap()">＋ 新建全新地图</button>
-  <input id="mapLinkInput" placeholder="粘贴地图链接或 ID" style="flex:1;min-width:160px">
-  <button onclick="openOnlineMap()">打开地图</button>
-  <button onclick="copyShareLink()">复制浏览链接</button>
-  <button onclick="copyEditLink()">复制协作编辑链接</button>
-  <span id="cloudStatus" class="hint">本地模式</span>
-  <p class="hint" style="width:100%;margin:0">在线版使用 Cloudflare Pages + D1；本地缓存和原交换码继续保留。私人地图通过链接密钥访问。</p>
-</div>
 <div class="tabs">
 <button id="tmap" class="tab active" onclick="tab('mapTab')">01 看地图 / 选点</button>
 <button id="troute" class="tab" onclick="tab('routeTab')">02 留下新节点</button>
-<button id="tex" class="tab" onclick="tab('exchangeTab')">03 交换整张地图</button>
+<button id="tonline" class="tab" onclick="tab('onlineTab')">03 在线地图 / 分享</button>
 </div>
 
 <section id="mapTab">
@@ -100,22 +88,30 @@ label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,text
 </div>
 </section>
 
-<section id="exchangeTab" class="hidden">
+<section id="onlineTab" class="hidden">
 <div class="panel">
-<h2>整张地图交换</h2>
-<p class="hint">交换的不再是单条终点线，而是<b>当前整张地图的所有痕迹</b>：底图、网络、多点连线。下一位导入后，可以从地图上的任意历史节点继续往下长。</p>
+<h2>创建与管理在线地图</h2>
+<p class="hint">创建在线地图后，可以通过浏览链接分享查看，或通过协作编辑链接邀请他人共同编辑。新建全新地图不会覆盖当前地图，原地图仍可通过原链接打开。</p>
+<div class="row">
+<div><label>地图名称</label><input id="mapTitle" placeholder="地图名称" value="我的 Music Map"></div>
+<div><label>地图可见性</label><select id="visibility" aria-label="地图可见性" style="width:100%;padding:10px;border:1.5px solid #151515;background:#fffef9"><option value="public">公开地图</option><option value="private">私人地图</option></select></div>
+</div>
+<div class="actions">
+<button onclick="createOnlineMap()">创建当前地图的在线版本</button>
+<button onclick="createNewBlankMap()">＋ 新建全新空白地图</button>
+</div>
+</div>
+<div class="panel">
+<h2>打开已有在线地图</h2>
+<label>地图链接或地图 ID</label>
+<div class="row"><input id="mapLinkInput" placeholder="粘贴地图链接或 ID"><button onclick="openOnlineMap()">打开地图</button></div>
+</div>
+<div class="panel">
+<h2>分享当前地图</h2>
+<p class="hint">浏览链接允许查看地图；协作编辑链接允许修改地图。私人地图的链接包含访问密钥，请谨慎转发。</p>
+<div class="actions"><button onclick="copyShareLink()">复制浏览链接</button><button onclick="copyEditLink()">复制协作编辑链接</button></div>
 <div class="card" id="summary">当前地图还没有路线。</div>
-<div class="actions"><button onclick="makeExchange()">生成整张地图交换码</button></div>
-<div id="exchangeResult" class="hidden" style="margin-top:14px">
-<label>交换码内容</label><div class="code" id="code"></div>
-<div class="actions"><button onclick="copyCode()">复制交换码</button></div>
-</div>
-</div>
-<div class="panel">
-<h2>接收并合并别人的地图</h2>
-<textarea id="incoming" placeholder="把别人发给你的交换码粘贴到这里…"></textarea>
-<div class="actions"><button onclick="importMap()">接收并合并到当前地图</button></div>
-<p class="hint">导入后，对方的路线和节点会自动融合进你的地图网络中[cite: 1]，所有旧路线全都被保留下来。</p>
+<div id="cloudStatus" class="hint">本地模式</div>
 </div>
 </section>
 
@@ -299,8 +295,8 @@ function copyEditLink(){
 function copyText(t,msg){if(navigator.clipboard?.writeText)navigator.clipboard.writeText(t).then(()=>alert(msg),()=>prompt("请复制链接",t));else prompt("请复制链接",t);}
 
 function tab(id){
- ["mapTab","routeTab","exchangeTab"].forEach(x=>$(x).classList.toggle("hidden",x!==id));
- ["tmap","troute","tex"].forEach((x,i)=>$(x).classList.toggle("active",["mapTab","routeTab","exchangeTab"][i]===id));
+ ["mapTab","routeTab","onlineTab"].forEach(x=>$(x).classList.toggle("hidden",x!==id));
+ ["tmap","troute","tonline"].forEach((x,i)=>$(x).classList.toggle("active",["mapTab","routeTab","onlineTab"][i]===id));
  render();updateSummary();
 }
 // 根据节点文字估算占用尺寸，并在地图内寻找不与现有节点重叠的位置。
@@ -454,533 +450,6 @@ function updateCurrent(){
  const hint=document.createElement("div");hint.className="hint";hint.textContent="理由："+(current.reason||"无");c.append(chain,hint);
 }
 function updateSummary(){$("summary").textContent=data.nodes.length+" 个节点 ／ "+data.edges.length+" 条连接 ／ "+data.history.length+" 次连线行动";}
-function repairKnownDuplicates(){
- if(!canMoveNodes())return alert("当前地图为只读状态，无法修复。请使用协作编辑链接打开。");
- const count=data.nodes.filter(n=>KNOWN_DUPLICATE_NODE_IDS.has(n.id)).length;
- if(!count){alert("没有发现这六个已确认的重复节点。当前地图可能尚未加载，或已经修复。");return;}
- if(!confirm("将删除已确认的六个误复制节点，并清理它们关联的连线。所有历史记录、原始六个节点及 test 节点都会保留。确定修复吗？"))return;
- data=cleanKnownDuplicates(data);selected=selected.filter(id=>nodeBy(id));
- if(current.newId&&!nodeBy(current.newId))current={};
- localSave();save();render();updateSummary();updateSelected();updateCurrent();
- log("已清理六个确认的重复节点；历史记录完整保留。");
- alert("修复完成，正在同步到云端。请等待状态显示“云端已保存”。");
-}
-function makeExchange(){
- let payload={version:5,map:data,exportedAt:new Date().toISOString()};
- let code=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));$("code").textContent=code;$("exchangeResult").classList.remove("hidden");log("已生成整张地图交换码。");
-}
-function copyCode(){copyText($("code").textContent,"交换码已复制");}
-function importMap(){
- try{
-  let p=JSON.parse(decodeURIComponent(escape(atob($("incoming").value.trim()))));
-  if(!p.map||!Array.isArray(p.map.nodes)||!Array.isArray(p.map.edges))throw new Error("格式错误");
-  const idMap=new Map();p.map.nodes.forEach(n=>idMap.set(n.id,uid()));
-  p.map.nodes.forEach(n=>data.nodes.push({...n,id:idMap.get(n.id)}));
-  p.map.edges.forEach(e=>{const a=idMap.get(e.a),b=idMap.get(e.b);if(a&&b)addEdge(a,b,e.reason||"");});
-  (p.map.history||[]).forEach(h=>{const to=idMap.get(h.to);if(to)data.history.push({...h,id:uid(),from:(h.from||[]).map(id=>idMap.get(id)).filter(Boolean),to});});
-  $("incoming").value="";save();render();updateSummary();log("成功合并外部地图！历史痕迹已保留。");tab("mapTab");
- }catch(e){alert("交换码解析失败，请确保完整复制了交换码。");}
-}
-function clearAll(){
- if(confirm("确定清空这台设备本地缓存的地图数据吗？在线地图不会因此删除。")){localStorage.removeItem("mm_v3");location.reload();}
-}
-render();updateSummary();updateSelected();updateCurrent();
-window.addEventListener("resize",render);
-if(onlineMapId){
- const saved=localStorage.getItem(ownerTokenKey(onlineMapId))||"";
- if(editToken)localStorage.setItem(ownerTokenKey(onlineMapId),editToken);
- loadOnlineMap(onlineMapId,readKey,editToken||saved);
-}
-</script>
-</body>
-</html><!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Map — Cloudflare Online v5.5 Edge Alignment Fix</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#ebe7dc;color:#151515;font-family:Arial,"Noto Sans SC",sans-serif}
-header{border-bottom:2px solid #151515;padding:20px 26px;display:flex;justify-content:space-between;align-items:center}
-h1{margin:0;font-size:25px}.sub,.hint{font-size:12px;opacity:.62}
-button{border:1.5px solid #151515;background:#f8f5ec;padding:9px 13px;font-weight:700;cursor:pointer}
-button:hover{background:#151515;color:#fff}.danger{border-color:#900;color:#900}
-main{max-width:1200px;margin:auto;padding:20px}.tabs{display:flex;gap:7px;margin-bottom:16px}.tab{flex:1}.tab.active{background:#151515;color:#fff}
-.panel{border:1.5px solid #151515;background:#f8f5ec;padding:18px;margin-bottom:15px}
-h2{font-size:19px;margin:0 0 7px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,textarea{width:100%;border:1.5px solid #151515;background:#fffef9;padding:10px;font:inherit}textarea{min-height:100px}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-#map{height:590px;position:relative;overflow:hidden;border:1.5px solid #151515;background:#fffef9;background-image:linear-gradient(#ddd9cf 1px,transparent 1px),linear-gradient(90deg,#ddd9cf 1px,transparent 1px);background-size:25px 25px}
-.edge-layer{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:visible}.edge-layer line{stroke:#151515;stroke-width:2;stroke-opacity:.68;stroke-linecap:round}
-.node{position:absolute;transform:translate(-50%,-50%);min-width:70px;max-width:145px;padding:8px 10px;text-align:center;border:1.5px solid #151515;background:#fffef9;font-size:12px;z-index:3;cursor:pointer;user-select:none;transition:transform .1s}
-.node:hover{transform:translate(-50%,-50%) scale(1.03)}
-.node{touch-action:none;cursor:grab}.node.dragging{cursor:grabbing;z-index:8;box-shadow:0 4px 16px #0003;transition:none}
-.node.base{border-radius:3px}.node.route{border-radius:50%}.node.selected{outline:3px solid #d9534f;outline-offset:3px;background:#fbeed5}
-.node.new{background:#151515;color:#fff}
-.node .tag{display:block;font-size:9px;opacity:.5;margin-top:3px}
-.node .delete-node{position:absolute;right:-9px;top:-9px;width:21px;height:21px;min-width:21px;padding:0;border:1px solid #900;border-radius:50%;background:#fff;color:#900;font-size:14px;line-height:18px;display:none;z-index:5}
-.node:hover .delete-node{display:block}
-.node .delete-node:hover{background:#900;color:#fff}
-.mode{padding:9px;background:#e1ddd2;font-size:12px;margin-bottom:10px}
-.selectedList{min-height:34px;border:1.5px dashed #151515;padding:8px;background:#fffef9;font-size:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.chip{background:#151515;color:#fff;padding:2px 6px;font-size:11px;border-radius:2px}
-.card{border:2px solid #151515;background:#fffef9;padding:16px}.chain{font-size:18px;line-height:1.8;margin:10px 0}
-.code{word-break:break-all;background:#e4e0d5;padding:10px;font-size:10px;max-height:130px;overflow:auto}
-.log{font-size:12px;line-height:1.7}.entry{border-bottom:1px solid #ccc8bd;padding:6px 0}
-.hidden{display:none}\n#mapTitle,#mapLinkInput{max-width:260px}\n@media(max-width:760px){#mapTitle,#mapLinkInput{max-width:none;width:100%}}
-@media(max-width:760px){.row,.row3{grid-template-columns:1fr}header{padding:16px}main{padding:11px}}
-</style>
-</head>
-<body>
-<header>
-<div><h1>Music Map / Shared Map v3.1</h1><div class="sub">共同底图 · 路线痕迹 · 多点出发 · 交换网络</div></div>
-<button class="danger" onclick="clearAll()">清空本地地图</button>
-</header>
-
-<main>
-<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-  <input id="mapTitle" placeholder="地图名称" value="我的 Music Map" style="flex:1;min-width:160px">
-  <select id="visibility" aria-label="地图可见性" style="padding:10px;border:1.5px solid #151515;background:#fffef9">
-    <option value="public">公开地图</option><option value="private">私人地图</option>
-  </select>
-  <button onclick="createOnlineMap()">创建在线地图</button>
-  <button onclick="createNewBlankMap()">＋ 新建全新地图</button>
-  <input id="mapLinkInput" placeholder="粘贴地图链接或 ID" style="flex:1;min-width:160px">
-  <button onclick="openOnlineMap()">打开地图</button>
-  <button onclick="copyShareLink()">复制浏览链接</button>
-  <button onclick="copyEditLink()">复制协作编辑链接</button>
-  <span id="cloudStatus" class="hint">本地模式</span>
-  <p class="hint" style="width:100%;margin:0">在线版使用 Cloudflare Pages + D1；本地缓存和原交换码继续保留。私人地图通过链接密钥访问。</p>
-</div>
-<div class="tabs">
-<button id="tmap" class="tab active" onclick="tab('mapTab')">01 看地图 / 选点</button>
-<button id="troute" class="tab" onclick="tab('routeTab')">02 留下新节点</button>
-<button id="tex" class="tab" onclick="tab('exchangeTab')">03 交换整张地图</button>
-</div>
-
-<section id="mapTab">
-<div class="panel">
-<h2>底图节点管理</h2>
-<p class="hint">随时在世界里加入新的公共锚点。点击地图上的任意节点可以直接选中/取消选中它们。</p>
-<div class="row3">
-<div><label>节点名称</label><input id="bn" placeholder="台湾 / 王菲 / 微波炉…"></div>
-<div><label>类型</label><input id="bt" placeholder="城市 / 人 / 物 / 音乐…"></div>
-<div><label>备注</label><input id="bi" placeholder="可不填"></div>
-</div>
-<div class="actions"><button onclick="addBase()">＋ 添加到底图</button><button onclick="save()">保存地图</button></div>
-</div>
-<div class="panel">
-<div id="mapMode" class="mode">💡 提示：你可以直接在下方地图里点击任意节点进行**多选**（被选中的节点会变成醒目的红边框），选好后切换到“留下新节点”标签页。</div>
-<div id="map"></div><p class="hint">操作：点击节点可多选；拖动节点可调整位置，松开后自动保存。在线只读地图不能拖动。</p>
-</div>
-</section>
-
-<section id="routeTab" class="hidden">
-<div class="panel">
-<h2>从已选节点出发，开辟新路线</h2>
-<p class="hint">没有任何固定步骤限制。任何底图节点或历史衍生节点，都可以作为下一次生长的起点。</p>
-<label>当前已选中的触发点（支持多选）</label>
-<div id="selected" class="selectedList">还没有选择任何点，请先到“看地图 / 选点”点击选中。</div>
-<div class="row" style="margin-top:12px">
-<div><label>你要留下的新节点</label><input id="nn" placeholder="电影、专辑、物件、地名、记忆…"></div>
-<div><label>为什么这样连？（连接理由）</label><input id="nr" placeholder="一个词、一句话、一个联想"></div>
-</div>
-<div class="actions">
-<button onclick="addRouteNode()">✨ 连接并生成新节点</button>
-<button onclick="clearSelection()">清空当前选择</button>
-</div>
-</div>
-<div class="panel">
-<h2>最新产生的连线痕迹</h2><div id="currentRoute" class="card"><span class="hint">暂无最新路线。</span></div>
-</div>
-</section>
-
-<section id="exchangeTab" class="hidden">
-<div class="row" style="margin:10px 0;gap:8px;align-items:center;flex-wrap:wrap">
- <button type="button" onclick="repairKnownDuplicates()">修复本地图中的六个重复节点</button>
- <span class="hint">仅清理已确认的六个误复制节点；保留 test 节点、其他数据及全部历史记录。</span>
-</div>
-
-<div class="panel">
-<h2>整张地图交换</h2>
-<p class="hint">交换的不再是单条终点线，而是<b>当前整张地图的所有痕迹</b>：底图、网络、多点连线。下一位导入后，可以从地图上的任意历史节点继续往下长。</p>
-<div class="card" id="summary">当前地图还没有路线。</div>
-<div class="actions"><button onclick="makeExchange()">生成整张地图交换码</button></div>
-<div id="exchangeResult" class="hidden" style="margin-top:14px">
-<label>交换码内容</label><div class="code" id="code"></div>
-<div class="actions"><button onclick="copyCode()">复制交换码</button></div>
-</div>
-</div>
-<div class="panel">
-<h2>接收并合并别人的地图</h2>
-<textarea id="incoming" placeholder="把别人发给你的交换码粘贴到这里…"></textarea>
-<div class="actions"><button onclick="importMap()">接收并合并到当前地图</button></div>
-<p class="hint">导入后，对方的路线和节点会自动融合进你的地图网络中[cite: 1]，所有旧路线全都被保留下来。</p>
-</div>
-</section>
-
-<section class="panel"><h2>操作与痕迹记录</h2><div id="logs" class="log">暂无。</div></section>
-</main>
-
-<script>
-/* Music Map v5.0 — Cloudflare Pages Functions + D1
-   同域 /api 接口；无需前端密钥。 */
-const DEFAULT_DATA = {
- nodes:[
-  {id:"b1",name:"台湾",type:"城市",x:18,y:25,kind:"base"},
-  {id:"b2",name:"涩谷",type:"城市",x:43,y:18,kind:"base"},
-  {id:"b3",name:"Beatles",type:"音乐",x:69,y:27,kind:"base"},
-  {id:"b4",name:"王菲",type:"音乐",x:24,y:70,kind:"base"},
-  {id:"b5",name:"微波炉",type:"物",x:58,y:73,kind:"base"},
-  {id:"b6",name:"晾衣架",type:"物",x:82,y:66,kind:"base"}
- ],edges:[],history:[]
-};
-const $ = id => document.getElementById(id);
-const uid = () => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now().toString(36);
-const clone = x => JSON.parse(JSON.stringify(x));
-let data = loadLocalData(), selected = [], current = {};
-let onlineMapId = new URLSearchParams(location.search).get("map");
-let readKey = new URLSearchParams(location.search).get("key") || "";
-let editToken = new URLSearchParams(location.search).get("edit") || "";
-let revision = 0, visibility = "public", syncing = false, pollTimer = null, lastSavedJSON = "";
-const $status = (s) => { $("cloudStatus").textContent = s; };
-
-function loadLocalData(){
- try { const d=JSON.parse(localStorage.getItem("mm_v3")||"null");
-  if(d && Array.isArray(d.nodes) && Array.isArray(d.edges)) return d;
- } catch(e) {}
- return clone(DEFAULT_DATA);
-}
-function localSave(){ data=cleanKnownDuplicates(data); localStorage.setItem("mm_v3", JSON.stringify(data)); }
-function log(t){
- const e=document.createElement("div");e.className="entry";
- e.textContent=new Date().toLocaleTimeString()+" "+t;$("logs").prepend(e);
-}
-function nodeBy(id){ return data.nodes.find(n=>n.id===id); }
-function edgeKey(a,b){ return [a,b].sort().join("_"); }
-function normalizeMap(x){return {nodes:Array.isArray(x?.nodes)?x.nodes:[],edges:Array.isArray(x?.edges)?x.edges:[],history:Array.isArray(x?.history)?x.history:[]};}
-// 本次地图中已确认的六个误复制节点。仅按精确 ID 清理，不按名称去重，避免误删用户有意创建的同名节点。
-const KNOWN_DUPLICATE_NODE_IDS = new Set([
- "44047a7d-efb7-4ec6-8dc4-e404287be519",
- "9ffd6cb1-e3a5-4eae-8a31-35729ac046ad",
- "99066c5b-5193-49cb-a243-8698d3db591e",
- "51bfba78-2d9f-488e-8ecf-5921fa0ad74c",
- "09526c8f-bfe1-4297-8fb0-1a0013b6a1eb",
- "b0b399e6-439c-4f05-a0a4-a0d1b99e3f31"
-]);
-function cleanKnownDuplicates(map){
- const out=normalizeMap(clone(map));
- const before=out.nodes.length;
- out.nodes=out.nodes.filter(n=>!KNOWN_DUPLICATE_NODE_IDS.has(n.id));
- if(out.nodes.length!==before){
-  out.edges=out.edges.filter(e=>!KNOWN_DUPLICATE_NODE_IDS.has(e.a)&&!KNOWN_DUPLICATE_NODE_IDS.has(e.b));
- }
- // 故意保留 history：历史记录是审计痕迹，不随节点删除而清除。
- return out;
-}
-function mergeMaps(remote, local){
- const out=cleanKnownDuplicates(remote);
- local=cleanKnownDuplicates(local);
- const nodeIds=new Set(out.nodes.map(n=>n.id));
- local.nodes.forEach(n=>{if(!nodeIds.has(n.id)){out.nodes.push(n);nodeIds.add(n.id);}});
- const edgeIds=new Set(out.edges.map(e=>e.key||edgeKey(e.a,e.b)));
- local.edges.forEach(e=>{const k=e.key||edgeKey(e.a,e.b);if(!edgeIds.has(k)){out.edges.push({...e,key:k});edgeIds.add(k);}});
- const historyIds=new Set(out.history.map(h=>h.id).filter(Boolean));
- local.history.forEach(h=>{if(h.id?!historyIds.has(h.id):!out.history.some(x=>x.to===h.to&&x.time===h.time)){out.history.push(h);if(h.id)historyIds.add(h.id);}});
- return out;
-}
-async function api(path, options={}){
- const headers={"Content-Type":"application/json",...(options.headers||{})};
- const res=await fetch("/api"+path,{...options,headers});
- const body=await res.json().catch(()=>({error:"服务器返回了无法识别的数据"}));
- if(!res.ok){const e=new Error(body.error||("请求失败："+res.status));e.status=res.status;e.body=body;throw e;}
- return body;
-}
-function setUrl(){const u=new URL(location.href);u.searchParams.set("map",onlineMapId);if(readKey)u.searchParams.set("key",readKey);else u.searchParams.delete("key");if(editToken)u.searchParams.set("edit",editToken);else u.searchParams.delete("edit");history.replaceState(null,"",u.pathname+u.search);}
-function ownerTokenKey(id){return "mm_edit_"+id;}
-async function createOnlineMap(){
- try{
-  const title=$("mapTitle").value.trim()||"未命名地图";
-  const result=await api("/maps",{method:"POST",body:JSON.stringify({title,visibility:$("visibility").value,mapData:data})});
-  onlineMapId=result.id;readKey=result.readKey;editToken=result.editToken;revision=result.revision||1;visibility=result.visibility;
-  localStorage.setItem(ownerTokenKey(onlineMapId),editToken);setUrl();
-  lastSavedJSON=JSON.stringify(data);startPolling();$status("在线地图已创建");
-  log("已创建在线地图："+title);
-  alert("在线地图已创建。浏览链接可分享查看；协作编辑链接可授予编辑权限，请谨慎转发。");
- }catch(e){console.error(e);alert("创建失败："+e.message);}
-}
-async function createNewBlankMap(){
- if(!confirm("将创建一张全新的空白在线地图。当前地图会保留在云端，可通过原链接再次打开。确定继续吗？"))return;
- const blank={nodes:[],edges:[],history:[]};
- try{
-  const title=prompt("请输入新地图名称", "我的新 Music Map");
-  if(title===null)return;
-  const result=await api("/maps",{method:"POST",body:JSON.stringify({title:title.trim()||"未命名地图",visibility:$("visibility").value,mapData:blank})});
-  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-  data=blank;selected=[];current={};
-  onlineMapId=result.id;readKey=result.readKey;editToken=result.editToken;revision=result.revision||1;visibility=result.visibility;
-  localStorage.setItem(ownerTokenKey(onlineMapId),editToken);localSave();setUrl();
-  $("mapTitle").value=result.title||title.trim()||"未命名地图";
-  lastSavedJSON=JSON.stringify(data);startPolling();render();updateSummary();updateSelected();updateCurrent();
-  $status("已新建空白在线地图");log("已新建全新地图："+$("mapTitle").value);
-  alert("新地图已创建并切换。原地图仍保留，可用原链接重新打开。请复制新地图的浏览或协作链接分享。");
- }catch(e){console.error(e);alert("新建地图失败："+e.message);}
-}
-async function loadOnlineMap(id, key="", edit=""){
- try{
-  const savedEdit=edit||localStorage.getItem(ownerTokenKey(id))||"";
-  const q=key?"?key="+encodeURIComponent(key):"";
-  const result=await api("/maps/"+encodeURIComponent(id)+q);
-  onlineMapId=id;readKey=key;editToken=savedEdit;revision=result.revision;visibility=result.visibility;
-  if(editToken)localStorage.setItem(ownerTokenKey(id),editToken);
-  data=cleanKnownDuplicates(result.mapData);$("mapTitle").value=result.title||"共享地图";$("visibility").value=visibility;
-  localSave();lastSavedJSON=JSON.stringify(data);setUrl();render();updateSummary();updateSelected();updateCurrent();
-  startPolling();$status(editToken?"在线地图 · 可编辑":"在线地图 · 只读");
-  log("已打开在线地图："+$("mapTitle").value);
- }catch(e){$status("载入失败");alert("打开地图失败："+e.message);}
-}
-async function openOnlineMap(){
- const raw=$("mapLinkInput").value.trim();if(!raw){alert("请粘贴地图链接或地图 ID");return;}
- try{
-  const u=new URL(raw,location.href),id=u.searchParams.get("map")||raw;
-  await loadOnlineMap(id,u.searchParams.get("key")||"",u.searchParams.get("edit")||"");
- }catch(e){alert("链接格式不正确："+e.message);}
-}
-async function save(){
- localSave();
- if(!onlineMapId||!editToken){$status("已保存到本地");return;}
- if(syncing)return;
- syncing=true;$status("正在同步…");
- try{
-  let attempt=0;
-  while(attempt<3){
-   try{
-    const r=await api("/maps/"+encodeURIComponent(onlineMapId),{
-     method:"PUT",headers:{"X-Edit-Token":editToken},
-     body:JSON.stringify({mapData:data,revision})
-    });
-    revision=r.revision;lastSavedJSON=JSON.stringify(data);$status("云端已保存");return;
-   }catch(e){
-    if(e.status!==409||!e.body?.mapData)throw e;
-    const local=clone(data);data=mergeMaps(e.body.mapData,local);revision=e.body.revision;attempt++;
-   }
-  }
-  throw new Error("多人同时编辑较频繁，请稍后再保存");
- }catch(e){console.error(e);$status("同步失败");log("云端同步失败："+e.message);}
- finally{syncing=false;}
-}
-function startPolling(){
- if(pollTimer)clearInterval(pollTimer);
- if(!onlineMapId)return;
- pollTimer=setInterval(async()=>{
-  if(syncing)return;
-  try{
-   const q=readKey?"?key="+encodeURIComponent(readKey):"";
-   const r=await api("/maps/"+encodeURIComponent(onlineMapId)+q);
-   if(r.revision<=revision)return;
-   const before=JSON.stringify(data);data=mergeMaps(r.mapData,data);revision=r.revision;
-   localSave();lastSavedJSON=JSON.stringify(data);render();updateSummary();updateSelected();updateCurrent();
-   if(JSON.stringify(data)!==before){$status("已同步其他人的修改");}
-  }catch(e){if(e.status===403)$status("无权访问");else $status("同步暂时中断");}
- },8000);
-}
-function copyShareLink(){
- if(!onlineMapId){alert("请先创建或打开在线地图");return;}
- const u=new URL(location.href);u.searchParams.set("map",onlineMapId);u.searchParams.delete("edit");
- if(visibility==="private"&&readKey)u.searchParams.set("key",readKey);else u.searchParams.delete("key");
- copyText(u.toString(),"浏览链接已复制");
-}
-function copyEditLink(){
- if(!onlineMapId||!editToken){alert("只有持有编辑权限的用户可以生成协作编辑链接");return;}
- const u=new URL(location.href);u.searchParams.set("map",onlineMapId);u.searchParams.set("edit",editToken);
- if(visibility==="private"&&readKey)u.searchParams.set("key",readKey);else u.searchParams.delete("key");
- copyText(u.toString(),"协作编辑链接已复制。任何获得此链接的人都能修改地图，请谨慎分享。");
-}
-function copyText(t,msg){if(navigator.clipboard?.writeText)navigator.clipboard.writeText(t).then(()=>alert(msg),()=>prompt("请复制链接",t));else prompt("请复制链接",t);}
-
-function tab(id){
- ["mapTab","routeTab","exchangeTab"].forEach(x=>$(x).classList.toggle("hidden",x!==id));
- ["tmap","troute","tex"].forEach((x,i)=>$(x).classList.toggle("active",["mapTab","routeTab","exchangeTab"][i]===id));
- render();updateSummary();
-}
-// 根据节点文字估算占用尺寸，并在地图内寻找不与现有节点重叠的位置。
-function nodeBox(n, mapW, mapH){
- const text=String(n.name||"未命名");
- const width=Math.min(145,Math.max(70,Math.min(text.length,18)*7.2+28));
- return {w:width,h:48};
-}
-function findFreePosition(x,y,excludeId=null){
- const m=$("map"), r=m.getBoundingClientRect();
- const W=Math.max(300,r.width), H=Math.max(300,r.height);
- const nodes=data.nodes.filter(n=>n.id!==excludeId);
- const golden=Math.PI*(3-Math.sqrt(5));
- for(let i=0;i<420;i++){
-  const radius=i===0?0:18*Math.sqrt(i);
-  const angle=i*golden;
-  const px=x+Math.cos(angle)*radius, py=y+Math.sin(angle)*radius;
-  const candidate={x:px,y:py};
-  const box=nodeBox({name:"候选节点"},W,H);
-  const cx=Math.max(box.w/2+10,Math.min(W-box.w/2-10,px));
-  const cy=Math.max(box.h/2+10,Math.min(H-box.h/2-10,py));
-  let collision=false;
-  for(const n of nodes){
-   const b=nodeBox(n,W,H), nx=n.x/100*W, ny=n.y/100*H;
-   if(Math.abs(cx-nx)<(box.w+b.w)/2+16 && Math.abs(cy-ny)<(box.h+b.h)/2+16){collision=true;break;}
-  }
-  if(!collision)return {x:cx/W*100,y:cy/H*100};
- }
- // 极端拥挤时仍给出边界内位置，用户可继续手动拖动整理。
- return {x:Math.max(5,Math.min(95,x/W*100)),y:Math.max(6,Math.min(94,y/H*100))};
-}
-function addBase(){
- let n=$("bn").value.trim();if(!n)return;
- const pos=findFreePosition(($("map").clientWidth||800)*(.15+Math.random()*.7),($("map").clientHeight||590)*(.15+Math.random()*.7));
- data.nodes.push({id:uid(),name:n,type:$("bt").value.trim(),note:$("bi").value.trim(),...pos,kind:"base"});
- $("bn").value=$("bt").value=$("bi").value="";save();render();
-}
-function addEdge(a,b,reason=""){if(a===b)return;if(!data.edges.some(e=>(e.key||edgeKey(e.a,e.b))===edgeKey(a,b)))data.edges.push({key:edgeKey(a,b),a,b,reason});}
-function drawEdges(){
- const m=$("map");
- m.querySelectorAll(".edge-layer").forEach(e=>e.remove());
- const ns="http://www.w3.org/2000/svg";
- const svg=document.createElementNS(ns,"svg");
- svg.setAttribute("class","edge-layer");
- // Use the SVG's actual on-screen rectangle as the coordinate system.
- // This avoids percentage/border/transform offsets that can detach the source end.
- m.prepend(svg);
- const sr=svg.getBoundingClientRect();
- const width=Math.max(1,sr.width),height=Math.max(1,sr.height);
- svg.setAttribute("viewBox",`0 0 ${width} ${height}`);
- svg.setAttribute("preserveAspectRatio","none");
- data.edges.forEach(e=>{
-  const a=nodeBy(e.a),b=nodeBy(e.b);if(!a||!b)return;
-  const da=m.querySelector(`[data-node-id="${CSS.escape(a.id)}"]`);
-  const db=m.querySelector(`[data-node-id="${CSS.escape(b.id)}"]`);
-  if(!da||!db)return;
-  const ra=da.getBoundingClientRect(),rb=db.getBoundingClientRect();
-  // Element centers are measured from the same viewport origin as the SVG.
-  const ax=(ra.left+ra.right)/2-sr.left, ay=(ra.top+ra.bottom)/2-sr.top;
-  const bx=(rb.left+rb.right)/2-sr.left, by=(rb.top+rb.bottom)/2-sr.top;
-  const dx=bx-ax,dy=by-ay;
-  if(Math.hypot(dx,dy)<1)return;
-  // Intersect the center-to-center ray with each node's real bounding rectangle.
-  const ahw=ra.width/2,ahh=ra.height/2,bhw=rb.width/2,bhh=rb.height/2;
-  const ta=1/Math.max(Math.abs(dx)/Math.max(ahw,0.5),Math.abs(dy)/Math.max(ahh,0.5));
-  const tb=1/Math.max(Math.abs(dx)/Math.max(bhw,0.5),Math.abs(dy)/Math.max(bhh,0.5));
-  const line=document.createElementNS(ns,"line");
-  line.setAttribute("x1",ax+dx*ta);line.setAttribute("y1",ay+dy*ta);
-  line.setAttribute("x2",bx-dx*tb);line.setAttribute("y2",by-dy*tb);
-  if(e.reason)line.setAttribute("aria-label",e.reason);
-  svg.appendChild(line);
- });
-}
-function canMoveNodes(){return !onlineMapId||!!editToken;}
-function render(){
- const m=$("map");m.querySelectorAll(".node,.line,.edge-layer").forEach(e=>e.remove());
- data.nodes.forEach(n=>{
-  let d=document.createElement("div");d.className="node "+(n.kind==="base"?"base":"route");
-  if(selected.includes(n.id))d.classList.add("selected");if(current.newId===n.id)d.classList.add("new");
-  d.style.left=n.x+"%";d.style.top=n.y+"%";d.dataset.nodeId=n.id;
-  const name=document.createTextNode(n.name||"未命名"),tag=document.createElement("span");tag.className="tag";tag.textContent=n.type||"路线节点";
-  d.append(name,tag);
-  if(canMoveNodes()){
-   const del=document.createElement("button");del.className="delete-node";del.type="button";del.textContent="×";del.title="删除这个节点";
-   del.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();});
-   del.addEventListener("click",ev=>{ev.preventDefault();ev.stopPropagation();deleteNode(n.id);});
-   d.append(del);
-  }
-  let drag=null;
-  d.addEventListener("pointerdown",ev=>{
-   if(!canMoveNodes()||ev.button!==0)return;
-   ev.preventDefault();ev.stopPropagation();
-   const mr=m.getBoundingClientRect();drag={id:n.id,startX:ev.clientX,startY:ev.clientY,moved:false,offsetX:ev.clientX-mr.left,offsetY:ev.clientY-mr.top};
-   d.setPointerCapture(ev.pointerId);
-  });
-  d.addEventListener("pointermove",ev=>{
-   if(!drag)return;
-   const dx=ev.clientX-drag.startX,dy=ev.clientY-drag.startY;
-   if(Math.hypot(dx,dy)>4)drag.moved=true;
-   if(!drag.moved)return;
-   const mr=m.getBoundingClientRect(),box=d.getBoundingClientRect();
-   const halfW=box.width/2,halfH=box.height/2;
-   const px=Math.max(halfW+8,Math.min(mr.width-halfW-8,ev.clientX-mr.left));
-   const py=Math.max(halfH+8,Math.min(mr.height-halfH-8,ev.clientY-mr.top));
-   n.x=px/mr.width*100;n.y=py/mr.height*100;
-   d.style.left=n.x+"%";d.style.top=n.y+"%";d.classList.add("dragging");drawEdges();
-  });
-  const finish=()=>{if(!drag)return;const moved=drag.moved;drag=null;d.classList.remove("dragging");if(moved){log("已移动节点："+(n.name||"未命名"));save();}else{toggleSelect(n.id);}};
-  d.addEventListener("pointerup",finish);d.addEventListener("pointercancel",finish);
-  m.appendChild(d);
- });
- drawEdges();
-}
-function deleteNode(id){
- if(!canMoveNodes())return alert("当前地图为只读状态，无法删除节点。");
- const node=nodeBy(id);if(!node)return;
- if(!confirm("确定删除节点「"+(node.name||"未命名")+"」吗？\n\n与它相连的连线会一并删除；历史记录会完整保留，不会被清除。"))return;
- data.nodes=data.nodes.filter(n=>n.id!==id);
- data.edges=data.edges.filter(e=>e.a!==id&&e.b!==id);
- selected=selected.filter(x=>x!==id);
- if(current.newId===id||current.to===id)current={};
- log("已删除节点："+(node.name||"未命名节点")+"；相关历史记录已保留");
- save();render();updateSelected();updateCurrent();updateSummary();
-}
-function toggleSelect(id){selected=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];updateSelected();render();}
-function updateSelected(){
- const c=$("selected");c.textContent="";
- if(!selected.length){const s=document.createElement("span");s.className="hint";s.textContent="还没有选择任何点，请先到“看地图 / 选点”点击选中。";c.append(s);return;}
- selected.forEach((id,i)=>{if(i)c.append(document.createTextNode(" ＋ "));const chip=document.createElement("span");chip.className="chip";chip.textContent=nodeBy(id)?.name||id;c.append(chip);});
-}
-function clearSelection(){selected=[];updateSelected();render();}
-function addRouteNode(){
- if(!selected.length)return alert("请至少在地图上选择一个点作为起点！");
- let n=$("nn").value.trim();if(!n)return alert("请输入你想要留下的新节点名称！");
- let avgx=selected.reduce((s,id)=>s+(nodeBy(id)?.x||50),0)/selected.length;
- let avgy=selected.reduce((s,id)=>s+(nodeBy(id)?.y||50),0)/selected.length;
- const mapW=$("map").clientWidth||800,mapH=$("map").clientHeight||590;
- const pos=findFreePosition(avgx/100*mapW,avgy/100*mapH);
- let newNode={id:uid(),name:n,type:"路线",...pos,kind:"route"};
- data.nodes.push(newNode);let reason=$("nr").value.trim();selected.forEach(id=>addEdge(id,newNode.id,reason));
- data.history.push({id:uid(),from:[...selected],to:newNode.id,reason,time:new Date().toISOString()});
- current={newId:newNode.id,from:[...selected],to:newNode.id,reason};
- $("nn").value=$("nr").value="";log("新增节点："+n+"（连自："+selected.map(id=>nodeBy(id)?.name).join("、")+"）");
- selected=[newNode.id];updateSelected();save();render();updateCurrent();tab("routeTab");
-}
-function updateCurrent(){
- const c=$("currentRoute");c.textContent="";
- if(!current.to){const s=document.createElement("span");s.className="hint";s.textContent="暂无最新路线。";c.append(s);return;}
- const chain=document.createElement("div");chain.className="chain";chain.textContent=current.from.map(id=>nodeBy(id)?.name||id).join(" ＋ ")+" → ";
- const b=document.createElement("b");b.textContent=nodeBy(current.to)?.name||current.to;chain.append(b);
- const hint=document.createElement("div");hint.className="hint";hint.textContent="理由："+(current.reason||"无");c.append(chain,hint);
-}
-function updateSummary(){$("summary").textContent=data.nodes.length+" 个节点 ／ "+data.edges.length+" 条连接 ／ "+data.history.length+" 次连线行动";}
-function repairKnownDuplicates(){
- if(!canMoveNodes())return alert("当前地图为只读状态，无法修复。请使用协作编辑链接打开。");
- const count=data.nodes.filter(n=>KNOWN_DUPLICATE_NODE_IDS.has(n.id)).length;
- if(!count){alert("没有发现这六个已确认的重复节点。当前地图可能尚未加载，或已经修复。");return;}
- if(!confirm("将删除已确认的六个误复制节点，并清理它们关联的连线。所有历史记录、原始六个节点及 test 节点都会保留。确定修复吗？"))return;
- data=cleanKnownDuplicates(data);selected=selected.filter(id=>nodeBy(id));
- if(current.newId&&!nodeBy(current.newId))current={};
- localSave();save();render();updateSummary();updateSelected();updateCurrent();
- log("已清理六个确认的重复节点；历史记录完整保留。");
- alert("修复完成，正在同步到云端。请等待状态显示“云端已保存”。");
-}
-function makeExchange(){
- let payload={version:5,map:data,exportedAt:new Date().toISOString()};
- let code=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));$("code").textContent=code;$("exchangeResult").classList.remove("hidden");log("已生成整张地图交换码。");
-}
-function copyCode(){copyText($("code").textContent,"交换码已复制");}
-function importMap(){
- try{
-  let p=JSON.parse(decodeURIComponent(escape(atob($("incoming").value.trim()))));
-  if(!p.map||!Array.isArray(p.map.nodes)||!Array.isArray(p.map.edges))throw new Error("格式错误");
-  const idMap=new Map();p.map.nodes.forEach(n=>idMap.set(n.id,uid()));
-  p.map.nodes.forEach(n=>data.nodes.push({...n,id:idMap.get(n.id)}));
-  p.map.edges.forEach(e=>{const a=idMap.get(e.a),b=idMap.get(e.b);if(a&&b)addEdge(a,b,e.reason||"");});
-  (p.map.history||[]).forEach(h=>{const to=idMap.get(h.to);if(to)data.history.push({...h,id:uid(),from:(h.from||[]).map(id=>idMap.get(id)).filter(Boolean),to});});
-  $("incoming").value="";save();render();updateSummary();log("成功合并外部地图！历史痕迹已保留。");tab("mapTab");
- }catch(e){alert("交换码解析失败，请确保完整复制了交换码。");}
-}
 function clearAll(){
  if(confirm("确定清空这台设备本地缓存的地图数据吗？在线地图不会因此删除。")){localStorage.removeItem("mm_v3");location.reload();}
 }
