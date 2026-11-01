@@ -1,8 +1,0 @@
-name = "music-map"
-compatibility_date = "2026-11-02"
-pages_build_output_dir = "./public"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "music-map-db"
-database_id = "在 Cloudflare D1 控制台创建后替换为真实 ID"
