@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Music Map — Cloudflare Online v5.1 Layout</title>
+<title>Music Map — Cloudflare Online v5.4 Edge Fix</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#ebe7dc;color:#151515;font-family:Arial,"Noto Sans SC",sans-serif}
 header{border-bottom:2px solid #151515;padding:20px 26px;display:flex;justify-content:space-between;align-items:center}
@@ -16,7 +16,7 @@ h2{font-size:19px;margin:0 0 7px}.row{display:grid;grid-template-columns:1fr 1fr
 label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px}input,textarea{width:100%;border:1.5px solid #151515;background:#fffef9;padding:10px;font:inherit}textarea{min-height:100px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 #map{height:590px;position:relative;overflow:hidden;border:1.5px solid #151515;background:#fffef9;background-image:linear-gradient(#ddd9cf 1px,transparent 1px),linear-gradient(90deg,#ddd9cf 1px,transparent 1px);background-size:25px 25px}
-.line{position:absolute;height:2px;background:#151515;transform-origin:left center;z-index:1;opacity:.65}
+.edge-layer{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:visible}.edge-layer line{stroke:#151515;stroke-width:2;stroke-opacity:.68;stroke-linecap:round}
 .node{position:absolute;transform:translate(-50%,-50%);min-width:70px;max-width:145px;padding:8px 10px;text-align:center;border:1.5px solid #151515;background:#fffef9;font-size:12px;z-index:3;cursor:pointer;user-select:none;transition:transform .1s}
 .node:hover{transform:translate(-50%,-50%) scale(1.03)}
 .node{touch-action:none;cursor:grab}.node.dragging{cursor:grabbing;z-index:8;box-shadow:0 4px 16px #0003;transition:none}
@@ -345,19 +345,37 @@ function addBase(){
 }
 function addEdge(a,b,reason=""){if(a===b)return;if(!data.edges.some(e=>(e.key||edgeKey(e.a,e.b))===edgeKey(a,b)))data.edges.push({key:edgeKey(a,b),a,b,reason});}
 function drawEdges(){
- const m=$("map");m.querySelectorAll(".line").forEach(e=>e.remove());
- const rect=m.getBoundingClientRect();
+ const m=$("map");
+ m.querySelectorAll(".edge-layer").forEach(e=>e.remove());
+ const width=m.clientWidth,height=m.clientHeight;
+ const ns="http://www.w3.org/2000/svg";
+ const svg=document.createElementNS(ns,"svg");
+ svg.setAttribute("class","edge-layer");
+ svg.setAttribute("viewBox",`0 0 ${width} ${height}`);
+ svg.setAttribute("preserveAspectRatio","none");
  data.edges.forEach(e=>{
-  let a=nodeBy(e.a),b=nodeBy(e.b);if(!a||!b)return;
-  let x1=a.x/100*rect.width,y1=a.y/100*rect.height,x2=b.x/100*rect.width,y2=b.y/100*rect.height;
-  let dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),l=document.createElement("div");
-  l.className="line";l.style.left=x1+"px";l.style.top=y1+"px";l.style.width=len+"px";l.style.transform="rotate("+Math.atan2(dy,dx)+"rad)";l.title=e.reason||"";m.appendChild(l);
+  const a=nodeBy(e.a),b=nodeBy(e.b);if(!a||!b)return;
+  const da=m.querySelector(`[data-node-id="${CSS.escape(a.id)}"]`);
+  const db=m.querySelector(`[data-node-id="${CSS.escape(b.id)}"]`);
+  if(!da||!db)return;
+  const ax=a.x/100*width,ay=a.y/100*height,bx=b.x/100*width,by=b.y/100*height;
+  const dx=bx-ax,dy=by-ay;
+  if(Math.hypot(dx,dy)<1)return;
+  // 让端点落在节点实际矩形边缘，而不是被节点遮住的中心位置。
+  const aw=da.offsetWidth/2,ah=da.offsetHeight/2,bw=db.offsetWidth/2,bh=db.offsetHeight/2;
+  const ta=1/Math.max(Math.abs(dx)/Math.max(aw,1),Math.abs(dy)/Math.max(ah,1));
+  const tb=1/Math.max(Math.abs(dx)/Math.max(bw,1),Math.abs(dy)/Math.max(bh,1));
+  const line=document.createElementNS(ns,"line");
+  line.setAttribute("x1",ax+dx*ta);line.setAttribute("y1",ay+dy*ta);
+  line.setAttribute("x2",bx-dx*tb);line.setAttribute("y2",by-dy*tb);
+  if(e.reason)line.setAttribute("aria-label",e.reason);
+  svg.appendChild(line);
  });
+ m.prepend(svg);
 }
 function canMoveNodes(){return !onlineMapId||!!editToken;}
 function render(){
- const m=$("map");m.querySelectorAll(".node,.line").forEach(e=>e.remove());
- drawEdges();
+ const m=$("map");m.querySelectorAll(".node,.line,.edge-layer").forEach(e=>e.remove());
  data.nodes.forEach(n=>{
   let d=document.createElement("div");d.className="node "+(n.kind==="base"?"base":"route");
   if(selected.includes(n.id))d.classList.add("selected");if(current.newId===n.id)d.classList.add("new");
@@ -393,6 +411,7 @@ function render(){
   d.addEventListener("pointerup",finish);d.addEventListener("pointercancel",finish);
   m.appendChild(d);
  });
+ drawEdges();
 }
 function deleteNode(id){
  if(!canMoveNodes())return alert("当前地图为只读状态，无法删除节点。");
